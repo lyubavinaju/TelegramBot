@@ -31,13 +31,68 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+   private String lastCommand = "";
+
     public void onUpdateReceived(Update update) {
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+        Date date = new Date();
+
+        System.out.println(dateFormat.format(date));
         Message message = update.getMessage();
         if (message != null && message.hasText()) {
-            if (message.getText().equals("/help")) {
-                sendMsg(message, "Погугли");
+
+            if (message.getText().equals("/date")) {
+                sendMsg(message, dateFormat.format(date));
+            } else if (message.getText().equals("/add")) {
+                sendMsg(message, "Введите дату и название события");
+            } else if (message.getText().equals("/all")) {
+                StringBuilder stringBuilder = new StringBuilder();
+                BufferedReader br = null;
+                try {
+                    br = new BufferedReader(new FileReader(new File("output.txt")));
+                    String s = "";
+                    while (s != null) {
+                        if (s.length() >= 2) {
+                            String[] strings = s.split(" ");
+                            System.out.println(strings[0] + " " + strings[1]);
+                            if (Long.parseLong(strings[0]) == message.getChatId()) {
+                                stringBuilder.append(s.substring(strings[0].length())).append("\n");
+                            }
+                        }
+
+                        s = br.readLine();
+                    }
+                    sendMsg(message, stringBuilder.toString());
+                } catch (IOException e) {
+                    try {
+                        if (br != null)
+                            br.close();
+                    } catch (IOException e1) {
+                        sendMsg(message, "error");
+                    }
+
+                }
+
+            } else if (!message.getText().startsWith("/") && "/add".equals(lastCommand)) {
+                try {
+                    FileWriter writer = new FileWriter(new File("output.txt"), true);
+                    PrintWriter printWriter = new PrintWriter(writer);
+
+                    printWriter.println(update.getMessage().getChatId() + " " + update.getMessage().getText());
+                    printWriter.close();
+                    writer.close();
+                    sendMsg(message, "добавлено");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             } else {
-                sendMsg(message, "Откуда у вас мои контакты? Объясните ситуацию");
+                sendMsg(message, update.getMessage().getText());
+
+            }
+            if (message.getText().startsWith("/")) {
+                lastCommand = message.getText();
+            } else {
+                lastCommand = "";
             }
         }
     }
